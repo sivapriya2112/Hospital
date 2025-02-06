@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:hospital/colors/appcolors.dart';
-import 'package:hospital/screens/RecepAppointments.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'RecepAppointments.dart';
 import 'RecepPatients.dart';
 
 class ReceptionistDashboard extends StatefulWidget {

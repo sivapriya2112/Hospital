@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:hospital/screens/Splash.dart';
+import 'InitialScreens/Splash.dart';
 import 'colors/appcolors.dart'; // Import your AppColors file
 
 void main() {

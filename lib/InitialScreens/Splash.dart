@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-
 import '../colors/appcolors.dart';
-import 'Onboarding.dart'; // Import color constants
+import 'Onboarding.dart';
 
 class SplashScreen extends StatefulWidget {
   @override
