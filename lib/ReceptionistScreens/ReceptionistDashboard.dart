@@ -35,8 +35,7 @@ class _ReceptionistDashboardState extends State<ReceptionistDashboard> {
       final response = await http.post(
         Uri.parse(apiUrl),
         headers: {
-          'token':
-              token, // Correct header key 'token' as per the backend's expectations
+          'token': token,
           'Content-Type': 'application/json',
         },
         body: json.encode({'id': id}), // Send ID in body

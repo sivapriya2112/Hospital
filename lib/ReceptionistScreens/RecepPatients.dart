@@ -35,6 +35,7 @@ class _RecepPatientsState extends State<RecepPatients> {
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('token');
+
       String? hospitalId = prefs.getString('hospitalId');
 
       final response = await http.post(

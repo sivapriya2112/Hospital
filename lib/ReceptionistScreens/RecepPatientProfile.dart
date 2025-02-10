@@ -115,10 +115,14 @@ class RecepPatientProfile extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 25),
-              buildOptionButton("Appointments", context),
-              buildOptionButton("Diagnostics", context),
-              buildOptionButton("Bill Details", context),
-              buildOptionButton("EMR", context),
+              buildOptionButton("Appointments", context, name, email, phoneNo,
+                  patientId.toString(), objectId, age.toString()),
+              buildOptionButton("Diagnostics", context, name, email, phoneNo,
+                  patientId.toString(), objectId, age.toString()),
+              buildOptionButton("Bill Details", context, name, email, phoneNo,
+                  patientId.toString(), objectId, age.toString()),
+              buildOptionButton("EMR", context, name, email, phoneNo,
+                  patientId.toString(), objectId, age.toString()),
             ],
           ),
         ),
@@ -478,7 +482,16 @@ class RecepPatientProfile extends StatelessWidget {
   }
 }
 
-Widget buildOptionButton(String text, BuildContext context) {
+Widget buildOptionButton(
+  String text,
+  BuildContext context,
+  String name,
+  String email,
+  String phoneNo,
+  String patientId,
+  String objectId,
+  String age,
+) {
   return Padding(
     padding: const EdgeInsets.symmetric(vertical: 8),
     child: ElevatedButton(
@@ -487,8 +500,8 @@ Widget buildOptionButton(String text, BuildContext context) {
           Navigator.push(
             context,
             MaterialPageRoute(
-                builder: (context) =>
-                    RecepAppointmentDoctors()), // Navigate to DoctorsScreen
+              builder: (context) => RecepAppointmentDoctors(),
+            ),
           );
         }
       },
