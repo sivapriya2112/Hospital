@@ -86,14 +86,26 @@ class _RecepAppointmentsState extends State<RecepAppointments> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Color(0xFFEFF1F7),
-      appBar: AppBar(
-        title: Text("Appointments", style: TextStyle(color: Colors.black)),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: true,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(75), // Set height to 70
+        child: AppBar(
+          title: Padding(
+            padding: const EdgeInsets.only(top: 25), // Add top padding to title
+            child: Text(
+              "Appointments",
+              style: TextStyle(fontFamily: "nunito", color: Colors.white),
+            ),
+          ),
+          backgroundColor: primaryColor,
+          elevation: 0,
+          centerTitle: true,
+          leading: Padding(
+            padding: const EdgeInsets.only(top: 23), // Add top padding to icon
+            child: IconButton(
+              icon: Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ),
         ),
       ),
       body: isLoading
@@ -108,16 +120,17 @@ class _RecepAppointmentsState extends State<RecepAppointments> {
                         hintText: "Search by UHID or patient name",
                         prefixIcon: Icon(Icons.search,
                             color: Colors.black), // Change icon color
+                        // Change this to your desired background color
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8.0),
+                          borderRadius: BorderRadius.circular(20.0),
                         ),
                         enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8.0),
+                          borderRadius: BorderRadius.circular(20.0),
                           borderSide: BorderSide(
                               color: primaryColor), // Default border color
                         ),
                         focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8.0),
+                          borderRadius: BorderRadius.circular(20.0),
                           borderSide: BorderSide(
                               color: Colors.black,
                               width: 1.5), // Focused border color
@@ -148,7 +161,7 @@ class AppointmentCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: EdgeInsets.only(bottom: 10),
+      margin: EdgeInsets.only(bottom: 10, left: 10, right: 10),
       padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,

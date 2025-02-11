@@ -65,6 +65,7 @@ class _ReceptionistDashboardState extends State<ReceptionistDashboard> {
   ];
 
   @override
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -76,13 +77,19 @@ class _ReceptionistDashboardState extends State<ReceptionistDashboard> {
             fontWeight: FontWeight.bold,
           ),
         ),
-        backgroundColor: Color(0xFF193482),
+        backgroundColor: primaryColor,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () {
             Navigator.pop(context);
           },
         ),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.logout, color: Colors.white),
+            onPressed: () {},
+          ),
+        ],
         toolbarHeight: 70,
       ),
       body: Padding(
