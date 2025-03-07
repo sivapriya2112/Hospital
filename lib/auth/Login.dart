@@ -60,9 +60,9 @@ class _LoginPageState extends State<LoginPage> {
         headers: {"Content-Type": "application/json"},
         body: jsonEncode(reqBody),
       );
+      print("Response Status Code: ${response.statusCode}");
 
       // Log response details to the console
-      print("Response Status Code: ${response.statusCode}");
       print("Response Body: ${response.body}");
 
       if (response.statusCode == 200) {

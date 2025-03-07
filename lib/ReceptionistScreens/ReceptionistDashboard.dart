@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'RecepAppointments.dart';
+import 'RecepBills.dart';
 import 'RecepPatients.dart';
 
 class ReceptionistDashboard extends StatefulWidget {
@@ -209,6 +210,11 @@ class _ReceptionistDashboardState extends State<ReceptionistDashboard> {
                           context,
                           MaterialPageRoute(
                               builder: (context) => RecepAppointments()),
+                        );
+                      } else if (item['label'] == 'Bill Details') {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => RecepBills()),
                         );
                       }
                     },
