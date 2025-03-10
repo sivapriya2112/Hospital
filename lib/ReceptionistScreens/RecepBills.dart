@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
-
+import 'package:fluttertoast/fluttertoast.dart';
 import '../colors/appcolors.dart';
 
 class RecepBills extends StatefulWidget {
@@ -122,9 +122,196 @@ class _RecepBillsState extends State<RecepBills> {
                       .contains(input.toLowerCase()) ||
                   (patient['patientFirstName'] ?? '')
                       .toLowerCase()
+                      .contains(input.toLowerCase()) ||
+                  (patient['uhid']?.toString() ?? '')
+                      .toLowerCase()
                       .contains(input.toLowerCase());
             }).toList();
     });
+  }
+
+  Future<void> _addBill(BuildContext context, String patientId, String subject,
+      String amount) async {
+    if (subject.trim().isEmpty || amount.trim().isEmpty) {
+      Fluttertoast.showToast(
+        msg: "Error: Subject and Amount are required",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+      );
+      return;
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    String? hospitalId = prefs.getString("hospitalId");
+    String? token = prefs.getString("token");
+
+    if (hospitalId == null) {
+      Fluttertoast.showToast(
+        msg: "Error: Hospital ID not found",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+      );
+      return;
+    }
+
+    final Uri apiUrl =
+        Uri.parse("https://hospital-fitq.onrender.com/billing/add");
+
+    final Map<String, dynamic> requestBody = {
+      "patientId": patientId,
+      "hospitalId": hospitalId,
+      "bill": [
+        {
+          "subject": subject,
+          "amount": amount,
+          "paid": true,
+        }
+      ]
+    };
+
+    print("Sending request to: $apiUrl");
+    print("Request Headers: {Content-Type: application/json, token: $token}");
+    print("Request Body: ${jsonEncode(requestBody)}");
+
+    try {
+      final response = await http.post(
+        apiUrl,
+        headers: {
+          "Content-Type": "application/json",
+          "token": token ?? "",
+        },
+        body: jsonEncode(requestBody),
+      );
+
+      print("Response Status Code: ${response.statusCode}");
+      print("Response Body: ${response.body}");
+
+      if (response.statusCode == 200) {
+        Fluttertoast.showToast(
+          msg: "Bill added successfully!",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+          backgroundColor: Colors.green,
+          textColor: Colors.white,
+        );
+        Navigator.pop(context); // for close dialog
+      } else {
+        Fluttertoast.showToast(
+          msg: "Failed to add bill: ${response.body}",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+        );
+      }
+    } catch (e) {
+      Fluttertoast.showToast(
+        msg: "Error: $e",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+      );
+    }
+  }
+
+  void _showAddBillDialog(String id) {
+    TextEditingController subjectController = TextEditingController();
+    TextEditingController amountController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          insetPadding: EdgeInsets.symmetric(horizontal: 15, vertical: 20),
+          child: Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  "Add New Bill",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: TextField(
+                    controller: subjectController,
+                    maxLength: 30,
+                    decoration: InputDecoration(
+                      labelText: "Subject",
+                      focusColor: primaryColor,
+                      border: OutlineInputBorder(
+                        borderSide: BorderSide(color: primaryColor),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: primaryColor),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: primaryColor, width: 2),
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: TextField(
+                    controller: amountController,
+                    maxLength: 4,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      labelText: "Amount",
+                      focusColor: primaryColor,
+                      border: OutlineInputBorder(
+                        borderSide: BorderSide(color: primaryColor),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: primaryColor),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: primaryColor, width: 2),
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 20),
+                SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(
+                        "Cancel",
+                        style: TextStyle(color: primaryColor), // Blue text
+                      ),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        _addBill(context, id, subjectController.text,
+                            amountController.text);
+                      },
+                      child: Text("Submit"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryColor,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -168,7 +355,7 @@ class _RecepBillsState extends State<RecepBills> {
               ),
             ),
 
-            // Patient List or Loading Indicator
+            // Patient List
             Expanded(
               child: isLoading
                   ? Center(child: CircularProgressIndicator()) // Show loader
@@ -263,18 +450,24 @@ class _RecepBillsState extends State<RecepBills> {
                                             ],
                                           ),
                                         ),
-                                        Icon(
-                                          isExpanded
-                                              ? Icons.expand_less
-                                              : Icons.expand_more,
-                                          color: Colors.black,
+                                        IconButton(
+                                          icon: Icon(
+                                            isExpanded
+                                                ? Icons.add
+                                                : Icons.expand_more,
+                                            color: Colors.black,
+                                          ),
+                                          onPressed: isExpanded
+                                              ? () {
+                                                  _showAddBillDialog(patient[
+                                                      "_id"]); // Pass bill id (patient id)
+                                                }
+                                              : null, // Disable button if not expanded
                                         ),
                                       ],
                                     ),
                                   ),
                                 ),
-
-                                // Billing details section
                                 if (isExpanded)
                                   Container(
                                     padding: EdgeInsets.symmetric(
@@ -286,16 +479,54 @@ class _RecepBillsState extends State<RecepBills> {
                                     ),
                                     child: bills.isEmpty
                                         ? Text(
-                                            "No billing records found",
+                                            "No bill details added yet",
                                             style:
                                                 TextStyle(fontFamily: 'Nunito'),
                                           )
                                         : Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
+                                              Text(
+                                                "Bill Details", // General title
+                                                style: TextStyle(
+                                                  fontFamily: 'Nunito',
+                                                  fontSize: 18,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.black,
+                                                ),
+                                              ),
+                                              SizedBox(height: 10),
+
+                                              // Table Headers
+                                              Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment
+                                                        .spaceBetween,
+                                                children: [
+                                                  Expanded(
+                                                      child: Text("Subject",
+                                                          style: _boldStyle())),
+                                                  Expanded(
+                                                      child: Text("Total",
+                                                          style: _boldStyle())),
+                                                  Expanded(
+                                                      child: Text("Paid",
+                                                          style: _boldStyle())),
+                                                  Expanded(
+                                                      child: Text("Due",
+                                                          style: _boldStyle())),
+                                                  Expanded(
+                                                      child: Text("Status",
+                                                          style: _boldStyle())),
+                                                ],
+                                              ),
+                                              Divider(),
+
+                                              // List of bills
                                               ...bills.map((bill) {
                                                 var billData =
                                                     bill["bill"] ?? {};
-
                                                 double totalAmount =
                                                     double.tryParse(
                                                             billData["amount"]
@@ -309,31 +540,57 @@ class _RecepBillsState extends State<RecepBills> {
                                                 double dueAmount =
                                                     totalAmount - paidAmount;
 
-                                                return Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  children: [
-                                                    _infoText(
-                                                        "Subject",
-                                                        billData["subject"]
-                                                                ?.toString() ??
-                                                            "N/A"),
-                                                    _infoText("Total Amount",
-                                                        "₹${totalAmount.toStringAsFixed(2)}"),
-                                                    _infoText("Paid Amount",
-                                                        "₹${paidAmount.toStringAsFixed(2)}"),
-                                                    _infoText("Due Amount",
-                                                        "₹${dueAmount.toStringAsFixed(2)}"),
-                                                    _infoText(
-                                                        "Date",
-                                                        bill["createdAt"]
-                                                                ?.toString() ??
-                                                            "N/A"),
-                                                    SizedBox(height: 8),
-                                                  ],
+                                                return Padding(
+                                                  padding: const EdgeInsets
+                                                      .symmetric(vertical: 4),
+                                                  child: Row(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .spaceBetween,
+                                                    children: [
+                                                      Expanded(
+                                                        child: Text(
+                                                          billData["subject"]
+                                                                  ?.toString() ??
+                                                              "N/A",
+                                                          style: _valueStyle(),
+                                                        ),
+                                                      ),
+                                                      Expanded(
+                                                        child: Text(
+                                                          "${totalAmount.toStringAsFixed(2)}",
+                                                          style: _valueStyle(),
+                                                        ),
+                                                      ),
+                                                      Expanded(
+                                                        child: Text(
+                                                          "${paidAmount.toStringAsFixed(2)}",
+                                                          style: _valueStyle(),
+                                                        ),
+                                                      ),
+                                                      Expanded(
+                                                        child: Text(
+                                                          "${dueAmount.toStringAsFixed(2)}",
+                                                          style: _valueStyle(),
+                                                        ),
+                                                      ),
+                                                      Expanded(
+                                                        child: Text(
+                                                          "Yet To Pay",
+                                                          style: TextStyle(
+                                                            color: Colors
+                                                                .red, // Set text color to RED
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
                                                 );
                                               }).toList(),
-                                              SizedBox(height: 8),
+
+                                              SizedBox(height: 10),
                                               Align(
                                                 alignment: Alignment.centerLeft,
                                                 child: ElevatedButton(
@@ -348,7 +605,33 @@ class _RecepBillsState extends State<RecepBills> {
                                                               6),
                                                     ),
                                                   ),
-                                                  onPressed: () {},
+                                                  onPressed: () {
+                                                    if (bills.isNotEmpty) {
+                                                      double totalAmount = 0.0;
+                                                      double totalPaid = 0.0;
+
+                                                      // Summing up total and paid amounts
+                                                      for (var bill in bills) {
+                                                        var billData =
+                                                            bill["bill"] ?? {};
+                                                        totalAmount += double
+                                                                .tryParse(billData[
+                                                                        "amount"]
+                                                                    .toString()) ??
+                                                            0.0;
+                                                        totalPaid += double
+                                                                .tryParse(billData[
+                                                                        "paid"]
+                                                                    .toString()) ??
+                                                            0.0;
+                                                      }
+
+                                                      // Pass data to dialog
+                                                      showEditPaymentDialog(
+                                                        context,
+                                                      );
+                                                    }
+                                                  },
                                                   child: Text(
                                                     "Edit",
                                                     style: TextStyle(
@@ -373,31 +656,153 @@ class _RecepBillsState extends State<RecepBills> {
     );
   }
 
-// Helper function for displaying bill details
-  Widget _infoText(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontFamily: 'Nunito',
-              fontWeight: FontWeight.w500,
-              fontSize: 16,
+  void showEditPaymentDialog(BuildContext context) {
+    final TextEditingController payableAmountController =
+        TextEditingController();
+    final _formKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          insetPadding:
+              EdgeInsets.symmetric(horizontal: 8), // Margin 5 on each side
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12.0),
+          ),
+          backgroundColor: Color(0xFFFCF8F6),
+          child: Container(
+            width: double.infinity, // Match parent width
+            padding: const EdgeInsets.all(20.0),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Text(
+                      "Edit Payment",
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  SizedBox(height: 15),
+                  buildLabelValueRow("Subject", "Consultation Fee"),
+                  SizedBox(height: 8),
+                  buildLabelValueRow("Total Paid", "₹500"),
+                  SizedBox(height: 8),
+                  buildLabelValueRow("Paid Amount", "₹200"),
+                  SizedBox(height: 8),
+                  buildLabelValueRow("Total Due", "₹300", isDue: true),
+                  SizedBox(height: 15),
+                  Text("Enter Payable Amount", style: TextStyle(fontSize: 16)),
+                  SizedBox(height: 8),
+                  TextFormField(
+                    controller: payableAmountController,
+                    keyboardType: TextInputType.number,
+                    maxLength: 4,
+                    decoration: InputDecoration(
+                      hintText: "Enter amount",
+                      hintStyle: TextStyle(color: Colors.grey),
+                      contentPadding:
+                          EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8.0),
+                        borderSide: BorderSide(color: Colors.black),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8.0),
+                        borderSide: BorderSide(color: Colors.black),
+                      ),
+                      counterText: "",
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Amount is required';
+                      }
+                      final double? enteredAmount = double.tryParse(value);
+                      if (enteredAmount == null || enteredAmount <= 0) {
+                        return 'Enter a valid amount';
+                      }
+                      if (enteredAmount > 300) {
+                        // Replace 300 with dynamic totalDue
+                        return 'Amount cannot exceed ₹300';
+                      }
+                      return null;
+                    },
+                  ),
+                  SizedBox(height: 15),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: Text("Cancel",
+                            style: TextStyle(color: Colors.black)),
+                      ),
+                      SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: () {},
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Color(0xFF153A7C),
+                          foregroundColor: Colors.white,
+                        ),
+                        child: Text("Submit"),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
-          Text(
+        );
+      },
+    );
+  }
+
+  Widget buildLabelValueRow(String label, String value, {bool isDue = false}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start, // Align text at the top
+      children: [
+        Text(
+          label,
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+        ),
+        SizedBox(width: 8), // Add space between label and value
+        Expanded(
+          // This prevents overflow
+          child: Text(
             value,
             style: TextStyle(
-              fontFamily: 'Nunito',
-              fontWeight: FontWeight.w500,
               fontSize: 16,
+              fontWeight: FontWeight.w500,
+              color: isDue ? Colors.red : Colors.black,
             ),
+            overflow: TextOverflow.ellipsis, // Shows "..."
+            maxLines: 2, // Allows wrapping
+            textAlign: TextAlign.end, // Aligns text to the right
           ),
-        ],
-      ),
+        ),
+      ],
+    );
+  }
+
+  TextStyle _valueStyle() {
+    return TextStyle(
+      fontFamily: 'Nunito',
+      fontSize: 12, // Reduced font size for values
+      color: Colors.black87, // Slightly muted color for readability
+    );
+  }
+
+  // Existing bold style function (used for both labels and values)
+  TextStyle _boldStyle() {
+    return TextStyle(
+      fontFamily: 'Nunito',
+      fontSize: 14, // Default size for bold text
+      fontWeight: FontWeight.bold,
     );
   }
 }
