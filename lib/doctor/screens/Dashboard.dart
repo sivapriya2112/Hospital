@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../colors/appcolors.dart';
+import '../../colors/appcolors.dart';
 
 class Dashboard extends StatefulWidget {
   @override

@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http; // Import for HTTP requests
 import 'package:shared_preferences/shared_preferences.dart'; // Import for SharedPreferences
-import '../DoctorScreens/Dashboard.dart';
-import '../ReceptionistScreens/ReceptionistDashboard.dart';
+import '../doctor/screens/Dashboard.dart';
 import '../colors/appcolors.dart';
+import '../receptionist/screens/receptionist/recep_profile_screen.dart';
 
 class LoginPage extends StatefulWidget {
   @override

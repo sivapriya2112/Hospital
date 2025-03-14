@@ -1,144 +1,50 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../colors/appcolors.dart';
-import 'RecepPatientProfile.dart';
+import 'package:hospital/receptionist/screens/patients/patient_edit_screen.dart';
+import 'package:provider/provider.dart';
+import '../../../colors/appcolors.dart';
+import '../../providers/patients/patients_provider.dart';
 
-class RecepPatients extends StatefulWidget {
-  @override
-  _RecepPatientsState createState() => _RecepPatientsState();
-}
-
-class _RecepPatientsState extends State<RecepPatients> {
-  List<dynamic> patientDetails = [];
-  List<dynamic> filteredPatients = [];
-  String searchInput = "";
-  int visibleCount = 10;
-  bool isLoading = true;
-  // Variables for appointment counts
-  int inpatientCount = 0;
-  int outpatientCount = 0;
-  int totalAppointmentsCount = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    fetchPatients();
-    loadAppointmentCounts(); // Load appointment counts
-  }
-
-  Future<void> fetchPatients() async {
-    setState(() {
-      isLoading = true;
-    });
-    try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      String? token = prefs.getString('token');
-
-      String? hospitalId = prefs.getString('hospitalId');
-
-      final response = await http.post(
-        Uri.parse('https://hospital-fitq.onrender.com/patients/getall'),
-        headers: {
-          'Content-Type': 'application/json',
-          'token': token ?? '',
-        },
-        body: json.encode({'hospitalId': hospitalId ?? ''}),
-      );
-
-      if (response.statusCode == 200) {
-        List<dynamic> data = json.decode(response.body);
-        setState(() {
-          patientDetails = data;
-          filteredPatients = data;
-          isLoading = false; // Step 3: Stop loading
-        });
-      } else {
-        setState(() {
-          patientDetails = [];
-          filteredPatients = [];
-          isLoading = false; // Stop loading on failure
-        });
-        print('Failed to load patients: ${response.statusCode}');
-      }
-    } catch (e) {
-      setState(() {
-        patientDetails = [];
-        filteredPatients = [];
-        isLoading = false; // Stop loading on error
-      });
-      print('Error fetching patients: $e');
-    }
-  }
-
-  // Load appointment counts from SharedPreferences
-  Future<void> loadAppointmentCounts() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    setState(() {
-      inpatientCount = prefs.getInt('inpatientCount') ?? 0;
-      outpatientCount = prefs.getInt('outpatientCount') ?? 0;
-      totalAppointmentsCount = prefs.getInt('totalAppointmentsCount') ?? 0;
-    });
-  }
-
-  void search(String input) {
-    setState(() {
-      searchInput = input;
-      filteredPatients = input.isEmpty
-          ? patientDetails
-          : patientDetails.where((patient) {
-              return (patient['patientEmail'] ?? '')
-                      .toLowerCase()
-                      .contains(input.toLowerCase()) ||
-                  (patient['patientLastName'] ?? '')
-                      .toString()
-                      .contains(input) ||
-                  (patient['patientFirstName'] ?? '')
-                      .toString()
-                      .contains(input);
-            }).toList();
-    });
-  }
-
-  void loadMorePatients() {
-    setState(() {
-      visibleCount += 10;
-    });
-  }
-
+class RecepPatients extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Patients',
-          style: TextStyle(
-            fontFamily: 'Nunito',
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
+    return ChangeNotifierProvider(
+      create: (context) => PatientsProvider()
+        ..fetchPatients()
+        ..loadAppointmentCounts(),
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(
+            'Patients',
+            style: TextStyle(
+              fontFamily: 'Nunito',
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
           ),
+          backgroundColor: Color(0xFF193482),
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () {
+              Navigator.pop(context);
+            },
+          ),
+          toolbarHeight: 70,
         ),
-        backgroundColor: Color(0xFF193482),
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
-        toolbarHeight: 70,
-      ),
-      body: isLoading
-          ? Center(
-              child: CircularProgressIndicator(
-                  color: primaryColor)) // Step 4: Show loader
-          : SingleChildScrollView(
+        body: Consumer<PatientsProvider>(
+          builder: (context, provider, child) {
+            if (provider.isLoading) {
+              return Center(
+                child: CircularProgressIndicator(color: primaryColor),
+              );
+            }
+
+            return SingleChildScrollView(
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   TextField(
-                    onChanged: search,
+                    onChanged: provider.search,
                     decoration: InputDecoration(
                       hintText: 'Search patients',
                       prefixIcon: Icon(Icons.search),
@@ -151,12 +57,14 @@ class _RecepPatientsState extends State<RecepPatients> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _buildInfoBox('Today Appointments',
-                          totalAppointmentsCount.toString(), Colors.blue),
-                      _buildInfoBox('Inpatients', inpatientCount.toString(),
-                          Colors.green),
-                      _buildInfoBox('Outpatients', outpatientCount.toString(),
-                          Colors.orange),
+                      _buildInfoBox(
+                          'Today Appointments',
+                          provider.totalAppointmentsCount.toString(),
+                          Colors.blue),
+                      _buildInfoBox('Inpatients',
+                          provider.inpatientCount.toString(), Colors.green),
+                      _buildInfoBox('Outpatients',
+                          provider.outpatientCount.toString(), Colors.orange),
                     ],
                   ),
                   SizedBox(height: 20),
@@ -165,26 +73,28 @@ class _RecepPatientsState extends State<RecepPatients> {
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                   SizedBox(height: 10),
-                  filteredPatients.isEmpty
+                  provider.filteredPatients.isEmpty
                       ? Center(
                           child: Text('No patients found'),
                         )
                       : ListView.builder(
                           shrinkWrap: true,
                           physics: NeverScrollableScrollPhysics(),
-                          itemCount: filteredPatients.length > visibleCount
-                              ? visibleCount + 1
-                              : filteredPatients.length,
+                          itemCount: provider.filteredPatients.length >
+                                  provider.visibleCount
+                              ? provider.visibleCount + 1
+                              : provider.filteredPatients.length,
                           itemBuilder: (context, index) {
-                            if (index == visibleCount &&
-                                filteredPatients.length > visibleCount) {
+                            if (index == provider.visibleCount &&
+                                provider.filteredPatients.length >
+                                    provider.visibleCount) {
                               return TextButton(
-                                onPressed: loadMorePatients,
+                                onPressed: provider.loadMorePatients,
                                 child: Text('Show More'),
                               );
                             }
 
-                            final patient = filteredPatients[index];
+                            final patient = provider.filteredPatients[index];
                             return Card(
                               margin: EdgeInsets.only(bottom: 12),
                               shape: RoundedRectangleBorder(
@@ -196,7 +106,6 @@ class _RecepPatientsState extends State<RecepPatients> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    /// Name and UHID in one row (aligned properly)
                                     Row(
                                       mainAxisAlignment:
                                           MainAxisAlignment.spaceBetween,
@@ -228,11 +137,7 @@ class _RecepPatientsState extends State<RecepPatients> {
                                         ),
                                       ],
                                     ),
-                                    SizedBox(
-                                        height:
-                                            12), // Equal spacing between all rows
-
-                                    /// Email
+                                    SizedBox(height: 12),
                                     Row(
                                       children: [
                                         Icon(Icons.email, color: blackColor),
@@ -247,9 +152,7 @@ class _RecepPatientsState extends State<RecepPatients> {
                                         ),
                                       ],
                                     ),
-                                    SizedBox(height: 12), // Reduced spacing
-
-                                    /// Phone No.
+                                    SizedBox(height: 12),
                                     Row(
                                       children: [
                                         Icon(Icons.phone, color: blackColor),
@@ -264,34 +167,22 @@ class _RecepPatientsState extends State<RecepPatients> {
                                         ),
                                       ],
                                     ),
-                                    SizedBox(height: 12), // Reduced spacing
-
-                                    /// Age on the left and Button on the right (aligned with UHID)
+                                    SizedBox(height: 12),
                                     Row(
                                       mainAxisAlignment:
                                           MainAxisAlignment.spaceBetween,
                                       children: [
                                         Row(
                                           children: [
-                                            Container(
-                                              margin: EdgeInsets.only(
-                                                  bottom:
-                                                      15), // Add bottom margin to the icon
-                                              child: Icon(Icons.calendar_today,
-                                                  color: blackColor),
-                                            ),
+                                            Icon(Icons.calendar_today,
+                                                color: blackColor),
                                             SizedBox(width: 10),
-                                            Container(
-                                              margin: EdgeInsets.only(
-                                                  bottom:
-                                                      15), // Add bottom margin to the text
-                                              child: Text(
-                                                'Age: ${patient['patientAge'] ?? 'N/A'}',
-                                                style: TextStyle(
-                                                  fontSize: 16,
-                                                  fontFamily: 'Nunito',
-                                                  color: blackColor,
-                                                ),
+                                            Text(
+                                              'Age: ${patient['patientAge'] ?? 'N/A'}',
+                                              style: TextStyle(
+                                                fontSize: 16,
+                                                fontFamily: 'Nunito',
+                                                color: blackColor,
                                               ),
                                             ),
                                           ],
@@ -302,7 +193,7 @@ class _RecepPatientsState extends State<RecepPatients> {
                                               context,
                                               MaterialPageRoute(
                                                 builder: (context) =>
-                                                    RecepPatientProfile(
+                                                    PatientEditScreen(
                                                   name:
                                                       '${patient['patientFirstName'] ?? ''} ${patient['patientLastName'] ?? ''}'
                                                           .trim(),
@@ -312,13 +203,13 @@ class _RecepPatientsState extends State<RecepPatients> {
                                                   age: int.tryParse(
                                                           patient['patientAge']
                                                               .toString()) ??
-                                                      0, // Fix here
+                                                      0,
                                                   phoneNo: patient['phoneno'] ??
                                                       'N/A',
-                                                  patientId: patient['uhid'] ??
-                                                      'N/A', // This corresponds to 'uhid'
-                                                  objectId: patient['_id'] ??
-                                                      'N/A', // This corresponds to '_id'
+                                                  patientId:
+                                                      patient['uhid'] ?? 'N/A',
+                                                  objectId:
+                                                      patient['_id'] ?? 'N/A',
                                                 ),
                                               ),
                                             );
@@ -344,19 +235,6 @@ class _RecepPatientsState extends State<RecepPatients> {
                                         ),
                                       ],
                                     ),
-                                    SizedBox(height: 10),
-                                    Visibility(
-                                      visible:
-                                          false, // This will hide the widget
-                                      child: Text(
-                                        'Object ID: ${patient['_id'] ?? 'N/A'}', // Display the object ID
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontFamily: 'Nunito',
-                                          color: Colors.grey,
-                                        ),
-                                      ),
-                                    ),
                                   ],
                                 ),
                               ),
@@ -365,7 +243,10 @@ class _RecepPatientsState extends State<RecepPatients> {
                         ),
                 ],
               ),
-            ),
+            );
+          },
+        ),
+      ),
     );
   }
 

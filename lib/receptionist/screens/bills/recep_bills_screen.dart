@@ -1,132 +1,26 @@
+// screens/recep_bills_screen.dart
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import '../PopupDialogs/AddBillDialog.dart';
-import '../PopupDialogs/EditPaymentDialog.dart';
+import 'package:provider/provider.dart';
+import '../../providers/bills/recep_bills_provider.dart';
+import 'addbill.dart';
+import 'editbill.dart';
 
-class RecepBills extends StatefulWidget {
+class RecepBillsScreen extends StatefulWidget {
   @override
-  _RecepBillsState createState() => _RecepBillsState();
+  _RecepBillsScreenState createState() => _RecepBillsScreenState();
 }
 
-class _RecepBillsState extends State<RecepBills> {
+class _RecepBillsScreenState extends State<RecepBillsScreen> {
   int? expandedIndex;
-  List<Map<String, dynamic>> bills = [];
-  List<Map<String, dynamic>> patients = [];
-  String searchInput = "";
-  List<dynamic> filteredPatients = [];
-  bool isLoading = true; // To track API loading state
 
   @override
   void initState() {
     super.initState();
-    fetchPatients().then((_) {
-      if (patients.isNotEmpty) {
-        filteredPatients = List.from(patients); // Initialize filteredPatients
-        fetchBills(patients[0]["_id"]); // Fetch bills for the first patient
+    final provider = Provider.of<RecepBillsProvider>(context, listen: false);
+    provider.fetchPatients().then((_) {
+      if (provider.patients.isNotEmpty) {
+        provider.fetchBills(provider.patients[0]["_id"]);
       }
-    });
-  }
-
-  Future<void> fetchPatients() async {
-    setState(() {
-      isLoading = true;
-    });
-
-    try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      String? token = prefs.getString('token');
-      String? hospitalId = prefs.getString('hospitalId');
-
-      final response = await http.post(
-        Uri.parse('https://hospital-fitq.onrender.com/patients/getall'),
-        headers: {
-          'Content-Type': 'application/json',
-          'token': token ?? '',
-        },
-        body: json.encode({'hospitalId': hospitalId ?? ''}),
-      );
-
-      if (response.statusCode == 200) {
-        List<dynamic> data = json.decode(response.body);
-        setState(() {
-          patients = List<Map<String, dynamic>>.from(data);
-          isLoading = false;
-        });
-      } else {
-        setState(() {
-          patients = [];
-          isLoading = false;
-        });
-        print('Failed to load patients: ${response.statusCode}');
-      }
-    } catch (e) {
-      setState(() {
-        patients = [];
-        isLoading = false;
-      });
-      print('Error fetching patients: $e');
-    }
-  }
-
-  Future<void> fetchBills(String patientId) async {
-    try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      String? token = prefs.getString('token');
-      String? hospitalId = prefs.getString('hospitalId');
-
-      final response = await http.post(
-        Uri.parse('https://hospital-fitq.onrender.com/billing/get'),
-        headers: {
-          'Content-Type': 'application/json',
-          'token': token ?? '',
-        },
-        body: json.encode({
-          'hospitalId': hospitalId ?? '',
-          'patientId': patientId,
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        List<dynamic> data = json.decode(response.body);
-
-        setState(() {
-          bills = List<Map<String, dynamic>>.from(data);
-          isLoading = false;
-        });
-      } else {
-        setState(() {
-          bills = [];
-          isLoading = false;
-        });
-        print('Failed to load bills: ${response.body}');
-      }
-    } catch (e) {
-      setState(() {
-        bills = [];
-        isLoading = false;
-      });
-      print('Error fetching bills: $e');
-    }
-  }
-
-  void search(String input) {
-    setState(() {
-      searchInput = input;
-      filteredPatients = input.isEmpty
-          ? patients
-          : patients.where((patient) {
-              return (patient['patientLastName'] ?? '')
-                      .toLowerCase()
-                      .contains(input.toLowerCase()) ||
-                  (patient['patientFirstName'] ?? '')
-                      .toLowerCase()
-                      .contains(input.toLowerCase()) ||
-                  (patient['uhid']?.toString() ?? '')
-                      .toLowerCase()
-                      .contains(input.toLowerCase());
-            }).toList();
     });
   }
 
@@ -154,13 +48,14 @@ class _RecepBillsState extends State<RecepBills> {
     );
   }
 
-  void _showAddBillDialog(String id) {
+  void _showAddBillDialog(String id, RecepBillsProvider provider) {
     showDialog(
       context: context,
       builder: (context) => AddBillDialog(
         patientId: id,
         onBillAdded: () {
-          fetchBills(id); // Refresh the bills instantly
+          setState(() {});
+          provider.fetchBills(id);
         },
       ),
     );
@@ -168,6 +63,7 @@ class _RecepBillsState extends State<RecepBills> {
 
   @override
   Widget build(BuildContext context) {
+    final provider = Provider.of<RecepBillsProvider>(context);
     return Scaffold(
       backgroundColor: Color(0xFFEAEFF6),
       appBar: AppBar(
@@ -196,7 +92,7 @@ class _RecepBillsState extends State<RecepBills> {
                 border: Border.all(color: Colors.grey.shade400),
               ),
               child: TextField(
-                onChanged: search,
+                onChanged: provider.search,
                 textAlignVertical: TextAlignVertical.center,
                 decoration: InputDecoration(
                   hintText: "Search Patients",
@@ -209,9 +105,9 @@ class _RecepBillsState extends State<RecepBills> {
 
             // Patient List
             Expanded(
-              child: isLoading
+              child: provider.isLoading
                   ? Center(child: CircularProgressIndicator()) // Show loader
-                  : patients.isEmpty
+                  : provider.patients.isEmpty
                       ? Center(
                           child: Text(
                             "No patients found",
@@ -220,11 +116,10 @@ class _RecepBillsState extends State<RecepBills> {
                           ),
                         )
                       : ListView.builder(
-                          itemCount: filteredPatients.length,
+                          itemCount: provider.filteredPatients.length,
                           itemBuilder: (context, index) {
                             bool isExpanded = expandedIndex == index;
-                            var patient =
-                                filteredPatients[index]; // Use filtered list
+                            var patient = provider.filteredPatients[index];
                             return Column(
                               children: [
                                 GestureDetector(
@@ -232,10 +127,11 @@ class _RecepBillsState extends State<RecepBills> {
                                     setState(() {
                                       if (isExpanded) {
                                         expandedIndex = null;
-                                        bills = []; // Clear previous bills
+                                        provider.bills =
+                                            []; // Clear previous bills
                                       } else {
                                         expandedIndex = index;
-                                        fetchBills(patient["_id"]);
+                                        provider.fetchBills(patient["_id"]);
                                       }
                                     });
                                   },
@@ -288,40 +184,6 @@ class _RecepBillsState extends State<RecepBills> {
                                                   color: Colors.grey,
                                                 ),
                                               ),
-                                              Visibility(
-                                                visible: false,
-                                                child: Text(
-                                                  patient["patientEmail"] ??
-                                                      "N/A",
-                                                  style: TextStyle(
-                                                    fontFamily: 'Nunito',
-                                                    fontSize: 14,
-                                                    color: Colors.grey,
-                                                  ),
-                                                ),
-                                              ),
-                                              Visibility(
-                                                visible: false,
-                                                child: Text(
-                                                  patient["phoneno"] ?? "N/A",
-                                                  style: TextStyle(
-                                                    fontFamily: 'Nunito',
-                                                    fontSize: 14,
-                                                    color: Colors.grey,
-                                                  ),
-                                                ),
-                                              ),
-                                              Visibility(
-                                                visible: false,
-                                                child: Text(
-                                                  patient["_id"] ?? "N/A",
-                                                  style: TextStyle(
-                                                    fontFamily: 'Nunito',
-                                                    fontSize: 14,
-                                                    color: Colors.grey,
-                                                  ),
-                                                ),
-                                              ),
                                             ],
                                           ),
                                         ),
@@ -334,8 +196,8 @@ class _RecepBillsState extends State<RecepBills> {
                                           ),
                                           onPressed: isExpanded
                                               ? () {
-                                                  _showAddBillDialog(patient[
-                                                      "_id"]); // Pass bill id (patient id)
+                                                  _showAddBillDialog(
+                                                      patient["_id"], provider);
                                                 }
                                               : null, // Disable button if not expanded
                                         ),
@@ -352,7 +214,7 @@ class _RecepBillsState extends State<RecepBills> {
                                       color: Colors.white,
                                       borderRadius: BorderRadius.circular(10),
                                     ),
-                                    child: bills.isEmpty
+                                    child: provider.bills.isEmpty
                                         ? Text(
                                             "No bill details added yet",
                                             style:
@@ -363,7 +225,7 @@ class _RecepBillsState extends State<RecepBills> {
                                                 CrossAxisAlignment.start,
                                             children: [
                                               Text(
-                                                "Bill Details", // General title
+                                                "Bill Details",
                                                 style: TextStyle(
                                                   fontFamily: 'Nunito',
                                                   fontSize: 18,
@@ -372,8 +234,6 @@ class _RecepBillsState extends State<RecepBills> {
                                                 ),
                                               ),
                                               SizedBox(height: 10),
-
-                                              // Table Headers
                                               Row(
                                                 mainAxisAlignment:
                                                     MainAxisAlignment
@@ -388,26 +248,18 @@ class _RecepBillsState extends State<RecepBills> {
                                                   Expanded(
                                                       child: Text("Paid",
                                                           style: _boldStyle())),
-                                                  Visibility(
-                                                    visible:
-                                                        false, // Hides the "Due" column
-                                                    child: Expanded(
-                                                        child: Text("Due",
-                                                            style:
-                                                                _boldStyle())),
-                                                  ),
                                                   Expanded(
                                                       child: Text("Status",
                                                           style: _boldStyle())),
                                                 ],
                                               ),
                                               Divider(),
-
-                                              // List of bills
-                                              ...(bills.length > 2
-                                                      ? bills.sublist(
-                                                          bills.length - 2)
-                                                      : bills)
+                                              ...(provider.bills.length > 2
+                                                      ? provider.bills.sublist(
+                                                          provider.bills
+                                                                  .length -
+                                                              2)
+                                                      : provider.bills)
                                                   .map((bill) {
                                                 var billData =
                                                     bill["bill"] ?? {};
@@ -421,9 +273,6 @@ class _RecepBillsState extends State<RecepBills> {
                                                             billData["paid"]
                                                                 .toString()) ??
                                                         0.0;
-                                                double dueAmount =
-                                                    totalAmount - paidAmount;
-
                                                 return Padding(
                                                   padding: const EdgeInsets
                                                       .symmetric(vertical: 4),
@@ -452,17 +301,6 @@ class _RecepBillsState extends State<RecepBills> {
                                                           style: _valueStyle(),
                                                         ),
                                                       ),
-                                                      Visibility(
-                                                        visible:
-                                                            false, // Hides the "Due" value
-                                                        child: Expanded(
-                                                          child: Text(
-                                                            "${dueAmount.toStringAsFixed(2)}",
-                                                            style:
-                                                                _valueStyle(),
-                                                          ),
-                                                        ),
-                                                      ),
                                                       Expanded(
                                                         child: Text(
                                                           "Yet To Pay",
@@ -477,20 +315,19 @@ class _RecepBillsState extends State<RecepBills> {
                                                   ),
                                                 );
                                               }).toList(),
-
                                               SizedBox(height: 10),
                                               Align(
                                                 alignment:
                                                     Alignment.centerRight,
                                                 child: GestureDetector(
                                                   onTap: () {
-                                                    if (bills.isNotEmpty) {
+                                                    if (provider
+                                                        .bills.isNotEmpty) {
                                                       double totalAmount = 0.0;
                                                       double totalPaidAmount =
                                                           0.0;
-
-                                                      // Calculate total amount and total paid amount by summing up all bills
-                                                      for (var bill in bills) {
+                                                      for (var bill
+                                                          in provider.bills) {
                                                         var billData =
                                                             bill["bill"] ?? {};
                                                         totalAmount += double
@@ -504,29 +341,26 @@ class _RecepBillsState extends State<RecepBills> {
                                                                     .toString()) ??
                                                             0.0;
                                                       }
-
-                                                      List<String> billIds = bills
-                                                          .map((bill) =>
-                                                              bill["_id"]
-                                                                  ?.toString() ??
-                                                              "")
-                                                          .toList();
-
-// Convert List<String> to a single string (comma-separated)
+                                                      List<String> billIds =
+                                                          provider.bills
+                                                              .map((bill) =>
+                                                                  bill["_id"]
+                                                                      ?.toString() ??
+                                                                  "")
+                                                              .toList();
                                                       String billIdsString =
                                                           billIds.join(",");
-
                                                       navigateToPaymentTableScreen(
                                                         context,
-                                                        bills.map<PaymentEntry>(
-                                                            (bill) {
+                                                        provider.bills
+                                                            .map<PaymentEntry>(
+                                                                (bill) {
                                                           var billData =
                                                               bill["bill"] ??
                                                                   {};
                                                           return PaymentEntry(
                                                             id: bill["_id"] ??
                                                                 "",
-                                                            // Ensure each entry has an ID
                                                             subject: billData[
                                                                         "subject"]
                                                                     ?.toString() ??
@@ -554,7 +388,6 @@ class _RecepBillsState extends State<RecepBills> {
                                                         "${patient['patientFirstName']} ${patient['patientLastName']}",
                                                         patient["uhid"] ?? "",
                                                         billIdsString,
-                                                        // ✅ Pass the string version of bill IDs
                                                         patient["patientEmail"] ??
                                                             "",
                                                         patient["phoneno"] ??
@@ -568,7 +401,6 @@ class _RecepBillsState extends State<RecepBills> {
                                                       fontFamily: 'Nunito',
                                                       fontSize: 14,
                                                       color: Color(0xFF153A7C),
-                                                      // Blue color similar to button
                                                       fontWeight:
                                                           FontWeight.bold,
                                                     ),
@@ -592,16 +424,15 @@ class _RecepBillsState extends State<RecepBills> {
   TextStyle _valueStyle() {
     return TextStyle(
       fontFamily: 'Nunito',
-      fontSize: 12, // Reduced font size for values
-      color: Colors.black87, // Slightly muted color for readability
+      fontSize: 12,
+      color: Colors.black87,
     );
   }
 
-  // Existing bold style function (used for both labels and values)
   TextStyle _boldStyle() {
     return TextStyle(
       fontFamily: 'Nunito',
-      fontSize: 14, // Default size for bold text
+      fontSize: 14,
       fontWeight: FontWeight.bold,
     );
   }

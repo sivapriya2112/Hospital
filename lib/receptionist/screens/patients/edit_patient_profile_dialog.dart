@@ -1,136 +1,22 @@
-import 'dart:convert'; // For JSON encoding
+// screens/edit_profile_dialog.dart
 import 'package:flutter/material.dart';
-import 'package:hospital/colors/appcolors.dart';
-import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/services.dart';
+import 'package:hospital/receptionist/screens/patients/patient_edit_screen.dart';
+import 'package:provider/provider.dart';
 
-import 'RecepAppointmentDoctors.dart';
+import '../../../colors/appcolors.dart';
+import '../../providers/patients/patient_edit_provider.dart';
 
-class RecepPatientProfile extends StatelessWidget {
-  final String name;
-  final String email;
-  final String phoneNo;
-  final String patientId;
-  final String objectId;
-  final int age;
-
-  const RecepPatientProfile({
-    Key? key,
-    required this.name,
-    required this.email,
-    required this.phoneNo,
-    required this.objectId,
-    required this.patientId,
-    required this.age,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF0F2F5),
-      appBar: AppBar(
-        title: const Text(
-          'Patient Profile',
-          style: TextStyle(fontFamily: 'Nunito', color: Colors.white),
-        ),
-        backgroundColor: const Color(0xFF193482),
-        iconTheme: const IconThemeData(color: Colors.white),
-        toolbarHeight: 70.0,
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 8,
-                      spreadRadius: 2,
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(
-                      child: Text(
-                        name,
-                        style: const TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'Nunito',
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Center(
-                      child: Text(
-                        patientId,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey,
-                          fontFamily: 'Nunito',
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text("Email : $email",
-                        style: const TextStyle(
-                            fontSize: 16,
-                            fontFamily: 'Nunito',
-                            color: Colors.black)),
-                    const SizedBox(height: 10),
-                    Text("Mobile : $phoneNo",
-                        style: const TextStyle(
-                            fontSize: 16,
-                            fontFamily: 'Nunito',
-                            color: Colors.black)),
-                    const SizedBox(height: 10),
-                    Text("Age : $age",
-                        style: const TextStyle(
-                            fontSize: 16,
-                            fontFamily: 'Nunito',
-                            color: Colors.black)),
-                    const SizedBox(height: 20),
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        _showEditDialog(context);
-                      },
-                      icon: const Icon(Icons.edit, color: Colors.white),
-                      label: const Text("Edit Profile",
-                          style: TextStyle(fontFamily: 'Nunito')),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF193482),
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 25),
-              buildOptionButton("Appointments", context, name, email, phoneNo,
-                  patientId.toString(), objectId, age.toString()),
-              buildOptionButton("Diagnostics", context, name, email, phoneNo,
-                  patientId.toString(), objectId, age.toString()),
-              buildOptionButton("Bill Details", context, name, email, phoneNo,
-                  patientId.toString(), objectId, age.toString()),
-              buildOptionButton("EMR", context, name, email, phoneNo,
-                  patientId.toString(), objectId, age.toString()),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showEditDialog(BuildContext context) {
+class EditProfileDialog {
+  static void show({
+    required BuildContext context,
+    required String name,
+    required String email,
+    required String phoneNo,
+    required String patientId,
+    required String objectId,
+    required int age,
+  }) {
     final TextEditingController firstNameController =
         TextEditingController(text: name.split(" ")[0]);
     final TextEditingController lastNameController = TextEditingController(
@@ -252,7 +138,7 @@ class RecepPatientProfile extends StatelessWidget {
                                 borderSide: BorderSide(color: primaryColor),
                               ),
                             ),
-                            maxLength: 20, // Max 20 characters
+                            maxLength: 20,
                             validator: (value) {
                               if (value == null || value.isEmpty) {
                                 return 'Last Name is required';
@@ -380,7 +266,11 @@ class RecepPatientProfile extends StatelessWidget {
                               "patientAge": int.parse(ageController.text),
                             };
 
-                            final response = await editPatient(updatedData);
+                            final patientEditProvider =
+                                Provider.of<PatientEditProvider>(context,
+                                    listen: false);
+                            final response = await patientEditProvider
+                                .editPatient(updatedData, objectId);
 
                             if (response) {
                               _showToast(context,
@@ -393,7 +283,7 @@ class RecepPatientProfile extends StatelessWidget {
                               Navigator.pushReplacement(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => RecepPatientProfile(
+                                  builder: (context) => PatientEditScreen(
                                     name:
                                         "${firstNameController.text} ${lastNameController.text}",
                                     email: emailController.text,
@@ -431,96 +321,4 @@ class RecepPatientProfile extends StatelessWidget {
       },
     );
   }
-
-  Future<bool> editPatient(Map<String, dynamic> patientbasicInfos) async {
-    const String baseUrl =
-        "https://hospital-fitq.onrender.com"; // Replace with actual Base URL
-    final String url = "$baseUrl/patients/edit";
-
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final String? token = prefs.getString("token");
-
-      if (token == null) {
-        print("Token not found. User might be logged out.");
-        return false;
-      }
-
-      print("id: $objectId");
-
-      // Add the _id to the patient data if it's not already included
-      if (!patientbasicInfos.containsKey('_id')) {
-        patientbasicInfos['_id'] = objectId;
-      }
-      final response = await http.put(
-        Uri.parse(url),
-        headers: {
-          "Content-Type": "application/json",
-          "token": token,
-        },
-        body: jsonEncode(patientbasicInfos),
-      );
-
-      print("Request Body: ${jsonEncode(patientbasicInfos)}");
-
-      final responseData = jsonDecode(response.body);
-      print("Response Data: $responseData");
-
-      if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body);
-        print("Patient updated successfully: ${responseData['message']}");
-        return true;
-      } else {
-        final responseData = jsonDecode(response.body);
-        print("Error updating patient: ${responseData['message']}");
-        return false;
-      }
-    } catch (error) {
-      print("Error: $error");
-      return false;
-    }
-  }
-}
-
-Widget buildOptionButton(
-  String text,
-  BuildContext context,
-  String name,
-  String email,
-  String phoneNo,
-  String patientId,
-  String objectId,
-  String age,
-) {
-  return Padding(
-    padding: const EdgeInsets.symmetric(vertical: 8),
-    child: ElevatedButton(
-      onPressed: () {
-        if (text == "Appointments") {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => RecepAppointmentDoctors(),
-            ),
-          );
-        }
-      },
-      style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFF193482),
-        foregroundColor: Colors.white,
-        minimumSize: const Size(double.infinity, 60),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(text,
-              style: const TextStyle(fontSize: 18, fontFamily: 'Nunito')),
-          const Icon(Icons.arrow_forward_ios, size: 18, color: Colors.white),
-        ],
-      ),
-    ),
-  );
 }

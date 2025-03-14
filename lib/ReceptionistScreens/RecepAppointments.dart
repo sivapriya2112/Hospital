@@ -3,7 +3,8 @@ import 'package:hospital/colors/appcolors.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'RecepPatientProfile.dart';
+
+import '../receptionist/screens/patients/patient_edit_screen.dart';
 
 class RecepAppointments extends StatefulWidget {
   @override
@@ -275,7 +276,7 @@ class AppointmentCard extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => RecepPatientProfile(
+                    builder: (context) => PatientEditScreen(
                       name:
                           '${appointment['patientInfo']?['patientFirstName'] ?? ''} ${appointment['patientInfo']?['patientLastName'] ?? ''}'
                               .trim(),
