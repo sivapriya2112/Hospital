@@ -1,18 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:hospital/colors/appcolors.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
 
-class RecepAppointmentDoctors extends StatefulWidget {
+import '../../providers/doctors/get_doctors.dart';
+
+class GetDoctorsScreen extends StatefulWidget {
   @override
-  _RecepAppointmentDoctorsState createState() =>
-      _RecepAppointmentDoctorsState();
+  _GetDoctorsScreenState createState() => _GetDoctorsScreenState();
 }
 
-class _RecepAppointmentDoctorsState extends State<RecepAppointmentDoctors> {
-  List<Map<String, String>> doctors = [];
-  List<Map<String, String>> filteredDoctors = [];
+class _GetDoctorsScreenState extends State<GetDoctorsScreen> {
   TextEditingController searchController = TextEditingController();
 
   @override
@@ -26,65 +22,23 @@ class _RecepAppointmentDoctorsState extends State<RecepAppointmentDoctors> {
     });
   }
 
-  Future<Map<String, String>> getPreferences() async {
-    final prefs = await SharedPreferences.getInstance();
-    String token = prefs.getString('token') ?? '';
-    String hospitalId = prefs.getString('hospitalId') ?? '';
-    return {
-      'token': token,
-      'hospitalId': hospitalId,
-    };
-  }
-
   Future<void> fetchDoctors() async {
     try {
-      Map<String, String> preferences = await getPreferences();
-      String token = preferences['token']!;
-      String hospitalId = preferences['hospitalId']!;
-
-      final uri = Uri.parse('https://hospital-fitq.onrender.com/doctor/getall');
-      final headers = {
-        'Content-Type': 'application/json',
-        'token': token,
-      };
-
-      final body = json.encode({
-        'hospitalId': hospitalId,
-      });
-
-      final response = await http.post(uri, headers: headers, body: body);
-
-      if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-
-        setState(() {
-          doctors = data.map<Map<String, String>>((doctor) {
-            return {
-              'name': doctor['name'] ?? '',
-              'specialization': doctor['specialization'] ?? '',
-              'email': doctor['email'] ?? '',
-              'phone': doctor['phone'] ?? '',
-            };
-          }).toList();
-          filteredDoctors = doctors; // Initialize with all doctors
-        });
-      } else {
-        throw Exception('Failed to load doctors: ${response.statusCode}');
-      }
+      await Provider.of<GetDoctorsProvider>(context, listen: false)
+          .fetchDoctors();
     } catch (error) {
-      print('Error fetching doctors: $error');
-      throw Exception('Failed to load doctors');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to load doctors. Please try again later.'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
   void filterDoctors() {
-    String query = searchController.text.toLowerCase();
-    setState(() {
-      filteredDoctors = doctors.where((doctor) {
-        return doctor['name']!.toLowerCase().contains(query) ||
-            doctor['specialization']!.toLowerCase().contains(query);
-      }).toList();
-    });
+    Provider.of<GetDoctorsProvider>(context, listen: false)
+        .filterDoctors(searchController.text);
   }
 
   @override
@@ -116,7 +70,7 @@ class _RecepAppointmentDoctorsState extends State<RecepAppointmentDoctors> {
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
                   borderSide: BorderSide(
-                    color: primaryColor, // Set the border color to blue
+                    color: Color(0xFF1E398F), // Set the border color to blue
                   ),
                 ),
                 hintStyle: TextStyle(
@@ -129,9 +83,14 @@ class _RecepAppointmentDoctorsState extends State<RecepAppointmentDoctors> {
             ),
 
             SizedBox(height: 20), // Add space between search field and grid
-            filteredDoctors.isEmpty
-                ? Center(child: CircularProgressIndicator())
-                : Expanded(
+            Consumer<GetDoctorsProvider>(
+              builder: (context, provider, child) {
+                if (provider.isLoading) {
+                  return Center(child: CircularProgressIndicator());
+                } else if (provider.filteredDoctors.isEmpty) {
+                  return Center(child: Text("No doctors found."));
+                } else {
+                  return Expanded(
                     child: GridView.builder(
                       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
@@ -139,18 +98,21 @@ class _RecepAppointmentDoctorsState extends State<RecepAppointmentDoctors> {
                         mainAxisSpacing: 20,
                         childAspectRatio: 0.7,
                       ),
-                      itemCount: filteredDoctors.length,
+                      itemCount: provider.filteredDoctors.length,
                       itemBuilder: (context, index) {
                         return DoctorCard(
-                          name: filteredDoctors[index]["name"]!,
-                          specialization: filteredDoctors[index]
+                          name: provider.filteredDoctors[index]["name"]!,
+                          specialization: provider.filteredDoctors[index]
                               ["specialization"]!,
-                          email: filteredDoctors[index]["email"]!,
-                          phone: filteredDoctors[index]["phone"]!,
+                          email: provider.filteredDoctors[index]["email"]!,
+                          phone: provider.filteredDoctors[index]["phone"]!,
                         );
                       },
                     ),
-                  ),
+                  );
+                }
+              },
+            ),
           ],
         ),
       ),

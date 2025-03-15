@@ -1,11 +1,11 @@
 // screens/edit_profile_dialog.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:hospital/receptionist/screens/patients/patient_edit_screen.dart';
+import 'package:hospital/receptionist/screens/patients/patient_profile.dart';
 import 'package:provider/provider.dart';
 
 import '../../../colors/appcolors.dart';
-import '../../providers/patients/patient_edit_provider.dart';
+import '../../providers/patients/update_patient_profile.dart';
 
 class EditProfileDialog {
   static void show({

@@ -1,6 +1,13 @@
 class ApiEndpoints {
   static const String baseUrl = 'https://hospital-fitq.onrender.com';
 
+  // Doctors
+  static const String getDoctors = '$baseUrl/doctor/getall';
+  static const String doctorLogin = '$baseUrl/doctor/login';
+
+  // Apointme
+  static const String getAppointments = '$baseUrl/appointment/get';
+
   // Patient Endpoints
   static const String getAllPatients = '$baseUrl/patients/getall';
   static const String editPatient = '$baseUrl/patients/edit';
@@ -11,6 +18,6 @@ class ApiEndpoints {
   static const String editBills = '$baseUrl/billing/update';
 
   //receptionist Endpoints
-  static const String login = '$baseUrl/receptionist/login';
+  static const String recepLogin = '$baseUrl/receptionist/login';
   static const String profileGet = '$baseUrl/receptionist/profile/get';
 }

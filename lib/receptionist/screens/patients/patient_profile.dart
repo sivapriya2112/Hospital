@@ -1,7 +1,7 @@
-// screens/patient_edit_screen.dart
+// screens/update_patient_profile.dart
 import 'package:flutter/material.dart';
-import '../../../ReceptionistScreens/RecepAppointmentDoctors.dart';
-import 'edit_patient_profile_dialog.dart';
+import '../doctors/get_doctors.dart';
+import 'update_patient_dialog.dart';
 
 class PatientEditScreen extends StatelessWidget {
   final String name;
@@ -152,7 +152,7 @@ class PatientEditScreen extends StatelessWidget {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => RecepAppointmentDoctors(),
+                builder: (context) => GetDoctorsScreen(),
               ),
             );
           }

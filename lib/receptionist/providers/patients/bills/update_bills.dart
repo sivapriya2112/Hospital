@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:fluttertoast/fluttertoast.dart';
 
-import '../../../constants/api_endpoints.dart';
+import '../../../../constants/api_endpoints.dart';
 
 class EditBillsProvider with ChangeNotifier {
   Future<bool> submitPayment(

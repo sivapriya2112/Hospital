@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 
-import '../../../colors/appcolors.dart';
-import '../../providers/bills/add_bills_provider.dart';
+import '../../../../colors/appcolors.dart';
+import '../../../providers/patients/bills/add_bills.dart';
 
 class AddBillDialog extends StatelessWidget {
   final String patientId;

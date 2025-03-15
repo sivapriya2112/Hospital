@@ -1,86 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:hospital/colors/appcolors.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
+import '../../../providers/patients/appointments/patient_appointments.dart';
+import '../patient_profile.dart';
 
-import '../receptionist/screens/patients/patient_edit_screen.dart';
-
-class RecepAppointments extends StatefulWidget {
+class PatientAppointScreen extends StatefulWidget {
   @override
-  _RecepAppointmentsState createState() => _RecepAppointmentsState();
+  _PatientAppointScreenState createState() => _PatientAppointScreenState();
 }
 
-class _RecepAppointmentsState extends State<RecepAppointments> {
-  List<dynamic> appointments = [];
-  bool isLoading = true;
-
-  List<dynamic> filteredAppointments = [];
+class _PatientAppointScreenState extends State<PatientAppointScreen> {
   TextEditingController searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    fetchAppointments();
-  }
-
-  Future<void> fetchAppointments() async {
-    print("fetchAppointments called");
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? hospitalId = prefs.getString('hospitalId');
-    String? token = prefs.getString('token');
-
-    if (hospitalId == null || token == null) {
-      setState(() {
-        isLoading = false;
-      });
-      print("Hospital ID or Token is null");
-      return;
-    }
-
-    final url = Uri.parse("https://hospital-fitq.onrender.com/appointment/get");
-    final response = await http.post(
-      url,
-      headers: {
-        'token': token,
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({"hospitalId": hospitalId}),
-    );
-
-    print("Response Code: ${response.statusCode}");
-    print("Response Body: ${response.body}");
-
-    if (response.statusCode == 200) {
-      setState(() {
-        appointments = jsonDecode(response.body);
-        filteredAppointments =
-            List.from(appointments); // Initialize filtered list
-        isLoading = false;
-      });
-    } else {
-      print("Error: ${response.statusCode}, ${response.body}");
-      setState(() {
-        isLoading = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Failed to fetch appointments. Please try again later.'),
-        backgroundColor: Colors.red,
-      ));
-    }
+    Provider.of<PatientAppointmentProvider>(context, listen: false)
+        .fetchAppointments();
   }
 
   void filterAppointments(String query) {
-    setState(() {
-      filteredAppointments = appointments.where((appointment) {
-        String patientName =
-            "${appointment['patientInfo']?['patientFirstName'] ?? ''} ${appointment['patientInfo']?['patientLastName'] ?? ''}"
-                .toLowerCase();
-        String uhid = appointment['patientInfo']?['uhid'] ?? '';
-        return patientName.contains(query.toLowerCase()) ||
-            uhid.contains(query);
-      }).toList();
-    });
+    Provider.of<PatientAppointmentProvider>(context, listen: false)
+        .filterAppointments(query);
   }
 
   @override
@@ -88,10 +29,10 @@ class _RecepAppointmentsState extends State<RecepAppointments> {
     return Scaffold(
       backgroundColor: Color(0xFFEFF1F7),
       appBar: PreferredSize(
-        preferredSize: Size.fromHeight(75), // Set height to 70
+        preferredSize: Size.fromHeight(75),
         child: AppBar(
           title: Padding(
-            padding: const EdgeInsets.only(top: 25), // Add top padding to title
+            padding: const EdgeInsets.only(top: 25),
             child: Text(
               "Appointments",
               style: TextStyle(fontFamily: "nunito", color: Colors.white),
@@ -101,7 +42,7 @@ class _RecepAppointmentsState extends State<RecepAppointments> {
           elevation: 0,
           centerTitle: true,
           leading: Padding(
-            padding: const EdgeInsets.only(top: 23), // Add top padding to icon
+            padding: const EdgeInsets.only(top: 23),
             child: IconButton(
               icon: Icon(Icons.arrow_back, color: Colors.white),
               onPressed: () => Navigator.pop(context),
@@ -109,47 +50,48 @@ class _RecepAppointmentsState extends State<RecepAppointments> {
           ),
         ),
       ),
-      body: isLoading
-          ? Center(child: CircularProgressIndicator(color: primaryColor))
-          : Column(
-              children: [
-                Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: TextField(
-                      controller: searchController,
-                      decoration: InputDecoration(
-                        hintText: "Search by UHID or patient name",
-                        prefixIcon: Icon(Icons.search,
-                            color: Colors.black), // Change icon color
-                        // Change this to your desired background color
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(20.0),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(20.0),
-                          borderSide: BorderSide(
-                              color: primaryColor), // Default border color
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(20.0),
-                          borderSide: BorderSide(
-                              color: Colors.black,
-                              width: 1.5), // Focused border color
-                        ),
+      body: Consumer<PatientAppointmentProvider>(
+        builder: (context, provider, child) {
+          if (provider.isLoading) {
+            return Center(
+                child: CircularProgressIndicator(color: primaryColor));
+          }
+          return Column(
+            children: [
+              Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: TextField(
+                    controller: searchController,
+                    decoration: InputDecoration(
+                      hintText: "Search by UHID or patient name",
+                      prefixIcon: Icon(Icons.search, color: Colors.black),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(20.0),
                       ),
-                      onChanged: filterAppointments,
-                    )),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: filteredAppointments.length,
-                    itemBuilder: (context, index) {
-                      return AppointmentCard(
-                          appointment: filteredAppointments[index]);
-                    },
-                  ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(20.0),
+                        borderSide: BorderSide(color: primaryColor),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(20.0),
+                        borderSide: BorderSide(color: Colors.black, width: 1.5),
+                      ),
+                    ),
+                    onChanged: filterAppointments,
+                  )),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: provider.filteredAppointments.length,
+                  itemBuilder: (context, index) {
+                    return AppointmentCard(
+                        appointment: provider.filteredAppointments[index]);
+                  },
                 ),
-              ],
-            ),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 }
@@ -200,8 +142,6 @@ class AppointmentCard extends StatelessWidget {
                     fontFamily: 'Nunito',
                   ),
                 ),
-                // String patientType = appointment['patientType'] ?? "N/A"; // Store the value if needed
-
                 Divider(thickness: 1, color: Colors.black26),
               ],
             ),

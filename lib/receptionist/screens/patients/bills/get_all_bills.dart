@@ -1,9 +1,9 @@
-// screens/recep_bills_screen.dart
+// screens/get_all_bills.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../providers/bills/recep_bills_provider.dart';
-import 'addbill.dart';
-import 'editbill.dart';
+import '../../../providers/patients/bills/get_all_bills.dart';
+import 'add_bills.dart';
+import 'update_bills.dart';
 
 class RecepBillsScreen extends StatefulWidget {
   @override
@@ -17,6 +17,7 @@ class _RecepBillsScreenState extends State<RecepBillsScreen> {
   void initState() {
     super.initState();
     final provider = Provider.of<RecepBillsProvider>(context, listen: false);
+
     provider.fetchPatients().then((_) {
       if (provider.patients.isNotEmpty) {
         provider.fetchBills(provider.patients[0]["_id"]);

@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:fluttertoast/fluttertoast.dart';
+import '../../../../constants/api_endpoints.dart';
 
 class AddBillsProvider with ChangeNotifier {
   Future<void> addBill({
@@ -38,8 +39,8 @@ class AddBillsProvider with ChangeNotifier {
       return;
     }
 
-    final Uri apiUrl =
-        Uri.parse("https://hospital-fitq.onrender.com/billing/add");
+    // Use the endpoint from ApiEndPoints
+    final Uri apiUrl = Uri.parse(ApiEndpoints.addBills);
 
     final Map<String, dynamic> requestBody = {
       "patientId": patientId,

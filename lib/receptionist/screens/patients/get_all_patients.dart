@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:hospital/receptionist/screens/patients/patient_edit_screen.dart';
+import 'package:hospital/receptionist/screens/patients/patient_profile.dart';
 import 'package:provider/provider.dart';
 import '../../../colors/appcolors.dart';
-import '../../providers/patients/patients_provider.dart';
+import '../../providers/patients/get_all_patients.dart';
 
 class RecepPatients extends StatelessWidget {
   @override

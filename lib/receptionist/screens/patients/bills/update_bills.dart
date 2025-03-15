@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:hospital/colors/appcolors.dart';
-import 'package:hospital/receptionist/screens/bills/recep_bills_screen.dart';
 import 'package:provider/provider.dart';
-import '../../providers/bills/edit_bills_provider.dart';
+import '../../../providers/patients/bills/update_bills.dart';
+import 'get_all_bills.dart';
 
 class PaymentTableScreen extends StatefulWidget {
   final List<PaymentEntry> payments;

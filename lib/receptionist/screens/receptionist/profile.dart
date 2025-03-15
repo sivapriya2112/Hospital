@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:hospital/colors/appcolors.dart';
-import 'package:hospital/receptionist/screens/bills/recep_bills_screen.dart';
 import 'package:provider/provider.dart';
-import '../../../ReceptionistScreens/RecepAppointments.dart';
-import '../../providers/receptionist/recep_profile_provider.dart';
-import '../patients/patients_screen.dart';
+import '../../providers/receptionist/profile.dart';
+import '../patients/appointments/patient_appointments.dart';
+import '../patients/bills/get_all_bills.dart';
+import '../patients/get_all_patients.dart';
 
 class ReceptionistDashboard extends StatelessWidget {
   final List<Map<String, dynamic>> dashboardItems = [
@@ -151,7 +151,7 @@ class ReceptionistDashboard extends StatelessWidget {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                                builder: (context) => RecepAppointments()),
+                                builder: (context) => PatientAppointScreen()),
                           );
                         } else if (item['label'] == 'Bill Details') {
                           Navigator.push(

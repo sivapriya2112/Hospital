@@ -1,10 +1,10 @@
-// providers/recep_bills_provider.dart
+// providers/get_all_bills.dart
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
-import '../../../constants/api_endpoints.dart';
+import '../../../../constants/api_endpoints.dart';
 
 class RecepBillsProvider with ChangeNotifier {
   List<Map<String, dynamic>> bills = [];
@@ -20,8 +20,9 @@ class RecepBillsProvider with ChangeNotifier {
       String? token = prefs.getString('token');
       String? hospitalId = prefs.getString('hospitalId');
 
+      // Use the endpoint from ApiEndPoints
       final response = await http.post(
-        Uri.parse('https://hospital-fitq.onrender.com/patients/getall'),
+        Uri.parse(ApiEndpoints.getAllPatients),
         headers: {
           'Content-Type': 'application/json',
           'token': token ?? '',

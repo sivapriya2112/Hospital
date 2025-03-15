@@ -1,10 +1,8 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http; // Import for HTTP requests
-import 'package:shared_preferences/shared_preferences.dart'; // Import for SharedPreferences
-import '../doctor/screens/Dashboard.dart';
 import '../colors/appcolors.dart';
-import '../receptionist/screens/receptionist/recep_profile_screen.dart';
+import '../doctor/screens/Dashboard.dart';
+import '../receptionist/screens/receptionist/profile.dart';
+import 'auth_services.dart';
 
 class LoginPage extends StatefulWidget {
   @override
@@ -15,108 +13,49 @@ class _LoginPageState extends State<LoginPage> {
   String? selectedRole;
   TextEditingController emailController = TextEditingController();
   TextEditingController passwordController = TextEditingController();
-  late SharedPreferences prefs;
   bool _isPasswordVisible = false;
+  final AuthService _authService = AuthService();
 
   @override
   void initState() {
     super.initState();
-    initSharedPref();
+    _authService.initSharedPref();
   }
 
-  void initSharedPref() async {
-    prefs = await SharedPreferences.getInstance();
-  }
-
-  void loginUser() async {
-    if (emailController.text.isNotEmpty && passwordController.text.isNotEmpty) {
-      var reqBody = {
-        "email": emailController.text,
-        "password": passwordController.text,
-      };
-
-      // Log request details to the console
-      print("Request Body: ${jsonEncode(reqBody)}");
-
-      // Determine the API URL based on the selected role
-      String apiUrl = "";
-
-      // Check the selected role and assign the corresponding API URL
-      if (selectedRole == 'Doctor') {
-        apiUrl = "https://hospital-fitq.onrender.com/doctor/login";
-      } else if (selectedRole == 'Receptionist') {
-        apiUrl = "https://hospital-fitq.onrender.com/receptionist/login";
-      } else {
-        // Handle the case when no role is selected
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Please select a role')),
-        );
-        return;
-      }
-
-      // Send request to the selected URL
-      var response = await http.post(
-        Uri.parse(apiUrl),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode(reqBody),
-      );
-      print("Response Status Code: ${response.statusCode}");
-
-      // Log response details to the console
-      print("Response Body: ${response.body}");
-
-      if (response.statusCode == 200) {
-        var jsonResponse = jsonDecode(response.body);
-        if (jsonResponse['token'] != null) {
-          var myToken = jsonResponse['token'];
-          var hospitalId = jsonResponse[
-              'hospitalId']; // Assuming 'hospitalId' is the key in the JSON response
-          var Id =
-              jsonResponse['Id']; // Assuming 'objectId' is the key for ObjectId
-
-          // Save token and hospital ID locally
-          SharedPreferences prefs = await SharedPreferences.getInstance();
-          prefs.setString('token', myToken);
-          prefs.setString('hospitalId', hospitalId); // Store hospital ID
-          prefs.setString('Id', Id); // Store ObjectId
-
-          // Navigate based on the adminType
-          if (jsonResponse['adminType'] == 'Doctor') {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => Dashboard()),
-            );
-          } else if (jsonResponse['adminType'] == 'Receptionist') {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => ReceptionistDashboard()),
-            );
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Access denied: Invalid admin type')),
-            );
-          }
+  void _login() {
+    _authService.loginUser(
+      emailController.text,
+      passwordController.text,
+      selectedRole ?? '',
+      (String adminType) {
+        if (adminType == 'Doctor') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => Dashboard()),
+          );
+        } else if (adminType == 'Receptionist') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => ReceptionistDashboard()),
+          );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Login failed: Invalid credentials')),
+            SnackBar(content: Text('Access denied: Invalid admin type')),
           );
         }
-      } else {
+      },
+      (String error) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Login failed: Invalid credentials')),
+          SnackBar(content: Text(error)),
         );
-      }
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please fill in all fields')),
-      );
-    }
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: primaryColor, // Use the primary color for the background
+      backgroundColor: primaryColor,
       body: Center(
         child: SingleChildScrollView(
           child: Padding(
@@ -124,14 +63,13 @@ class _LoginPageState extends State<LoginPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Sign In Title
                 Text(
                   'Sign in',
                   style: TextStyle(
                     fontSize: 30,
                     fontFamily: 'nunito',
                     fontWeight: FontWeight.bold,
-                    color: Colors.white, // Set color to white
+                    color: Colors.white,
                   ),
                 ),
                 const SizedBox(height: 8.0),
@@ -156,7 +94,6 @@ class _LoginPageState extends State<LoginPage> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Dropdown for Select Role
                         DropdownButtonFormField<String>(
                           value: selectedRole,
                           decoration: InputDecoration(
@@ -167,7 +104,7 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                             labelText: 'Select a Role',
                             labelStyle: TextStyle(
-                              fontFamily: 'nunito', // Apply the fontFamily here
+                              fontFamily: 'nunito',
                             ),
                           ),
                           items: ['Doctor', 'Receptionist']
@@ -176,8 +113,7 @@ class _LoginPageState extends State<LoginPage> {
                                     child: Text(
                                       role,
                                       style: TextStyle(
-                                        fontFamily:
-                                            'nunito', // Apply nunito font
+                                        fontFamily: 'nunito',
                                       ),
                                     ),
                                   ))
@@ -188,15 +124,13 @@ class _LoginPageState extends State<LoginPage> {
                             });
                           },
                         ),
-
                         const SizedBox(height: 16.0),
-                        // Email Field
                         TextField(
                           controller: emailController,
                           decoration: InputDecoration(
                             labelText: 'Email',
                             labelStyle: TextStyle(
-                              fontFamily: 'nunito', // Apply the fontFamily here
+                              fontFamily: 'nunito',
                             ),
                             prefixIcon: Icon(Icons.email),
                             border: OutlineInputBorder(
@@ -206,13 +140,12 @@ class _LoginPageState extends State<LoginPage> {
                           keyboardType: TextInputType.emailAddress,
                         ),
                         const SizedBox(height: 16.0),
-                        // Password Field
                         TextField(
                           controller: passwordController,
                           decoration: InputDecoration(
                             labelText: 'Password',
                             labelStyle: TextStyle(
-                              fontFamily: 'nunito', // Apply the fontFamily here
+                              fontFamily: 'nunito',
                             ),
                             prefixIcon: Icon(Icons.lock),
                             suffixIcon: IconButton(
@@ -233,15 +166,11 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                           obscureText: !_isPasswordVisible,
                         ),
-
                         const SizedBox(height: 24.0),
-                        // Sign In Button
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed: () {
-                              loginUser(); // Call the login function
-                            },
+                            onPressed: _login,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: primaryColor,
                               padding:
@@ -256,7 +185,7 @@ class _LoginPageState extends State<LoginPage> {
                                 fontSize: 16,
                                 fontFamily: 'nunito',
                                 fontWeight: FontWeight.bold,
-                                color: white, // Use the custom white color
+                                color: white,
                               ),
                             ),
                           ),
